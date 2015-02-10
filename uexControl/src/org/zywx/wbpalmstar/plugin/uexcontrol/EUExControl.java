@@ -12,11 +12,14 @@ import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
 import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.DatePicker;
 import android.widget.TimePicker;
 
 public class EUExControl extends EUExBase {
 	public static final String CALLBACK_DATEPICKER = "uexControl.cbOpenDatePicker";
+	public static final String CALLBACK_DATEPICKERWITHOUTDAY = "uexControl.cbOpenDatePickerWithoutDay";
 	public static final String CALLBACK_TIMEPICKER = "uexControl.cbOpenTimePicker";
 	public static final String CALLBACK_INPUT_COMPLETED = "uexControl.cbInputCompleted";
 	public static final String CALLBACK_INPUTDIALOG = "uexControl.cbOpenInputDialog";
@@ -90,7 +93,84 @@ public class EUExControl extends EUExBase {
 			}
 		});
 	}
-
+	
+	public void openDatePickerWithoutDay(String[] params) {
+		int inYear, inMonth = 0;
+		if (params.length == 2) {
+			try {
+				inYear = Integer.parseInt(params[0].trim());
+				inMonth = Integer.parseInt(params[1].trim());
+				Log.i("date", "inYear1=" + inYear + ",inMonth1=" + inMonth);
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
+				// 默认当前日期
+				Calendar calendar = Calendar.getInstance();
+				inYear = calendar.get(Calendar.YEAR);
+				inMonth = calendar.get(Calendar.MONTH);
+			}
+		} else {// 默认当前日期
+			Calendar calendar = Calendar.getInstance();
+			inYear = calendar.get(Calendar.YEAR);
+			inMonth = calendar.get(Calendar.MONTH);
+		}
+		Log.i("date", "inYear2=" + inYear + ",inMonth2=" + inMonth);
+		final int[] dateSet = new int[] { inYear, inMonth, 0 };
+		((Activity) mContext).runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				OverwriteDatePickerWithoutDayDialog datePickerWithoutDayDialog = new OverwriteDatePickerWithoutDayDialog(
+						mContext, new DatePickerDialog.OnDateSetListener() {
+							@Override
+							public void onDateSet(DatePicker view, int year,
+									int monthOfYear, int dayOfMonth) {
+								Log.i("date", "year4=" + year
+										+ ",monthOfYear4=" + monthOfYear
+										+ ",dayOfMonth4=" + dayOfMonth);
+								JSONObject jsonObject = new JSONObject();
+								try {
+									jsonObject
+											.put(EUExCallback.F_JK_YEAR, year);
+									jsonObject.put(EUExCallback.F_JK_MONTH,
+											monthOfYear + 1);
+									Log.i("jsonObject.toString()",
+											jsonObject.toString() + "----");
+									jsCallback(CALLBACK_DATEPICKERWITHOUTDAY,
+											0, EUExCallback.F_C_JSON,
+											jsonObject.toString());
+								} catch (JSONException e) {
+									e.printStackTrace();
+								}
+							}
+						}, dateSet[0], dateSet[1], dateSet[2]);
+				datePickerWithoutDayDialog.setCancelable(true);
+				int year = dateSet[0], month = dateSet[1];
+				if (month > 12) {
+					year = year + month / 12;
+					month = month % 12;
+					if (month == 0) {
+						month = 12;
+						year = year - 1;
+					}
+				}
+				if (year < 1900) {
+					year = 1900;
+					month = 01;
+				}
+				if (year > 2100) {
+					year = 2100;
+					month = 12;
+				}
+				datePickerWithoutDayDialog.setTitle(year + "-" + month);
+				datePickerWithoutDayDialog.show();
+				DatePicker dp = datePickerWithoutDayDialog.getDatePicker();
+				if (dp != null) {
+					((ViewGroup) ((ViewGroup) dp.getChildAt(0)).getChildAt(0))
+							.getChildAt(2).setVisibility(View.GONE);
+				}
+			}
+		});
+	}
+	
 	public void openTimePicker(String[] params) {
 		int inHour, inMinute = 0;
 		if (params.length == 2) {
